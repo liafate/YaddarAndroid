@@ -1,60 +1,55 @@
+
 package ir.yaddar.app.data
 
-import androidx.room.Database
-import androidx.room.RoomDatabase
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.Query
 
-@Database(
-    entities = [
-        ProductEntity::class,
-        PersonEntity::class,
-        FinancialEventEntity::class,
-        FinancialDocumentEntity::class,
-        DocumentItemEntity::class
-    ],
-    version = 2,
-    exportSchema = false
-)
-abstract class YaddarDatabase : RoomDatabase() {
+@Dao
+interface YaddarDao {
 
-    abstract fun yaddarDao(): YaddarDao
+    @Insert
+    suspend fun insertProduct(product: ProductEntity): Long
 
-    companion object {
+    @Query("SELECT * FROM products ORDER BY name")
+    suspend fun getProducts(): List<ProductEntity>
 
-        val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(db: SupportSQLiteDatabase) {
+    @Insert
+    suspend fun insertPerson(person: PersonEntity): Long
 
-                db.execSQL(
-                    """
-                    CREATE TABLE IF NOT EXISTS documents (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                        type TEXT NOT NULL,
-                        personId INTEGER,
-                        subtotal INTEGER NOT NULL,
-                        discount INTEGER NOT NULL,
-                        total INTEGER NOT NULL,
-                        paid INTEGER NOT NULL,
-                        createdAt INTEGER NOT NULL,
-                        note TEXT
-                    )
-                    """.trimIndent()
-                )
+    @Query("SELECT * FROM people ORDER BY name")
+    suspend fun getPeople(): List<PersonEntity>
 
-                db.execSQL(
-                    """
-                    CREATE TABLE IF NOT EXISTS document_items (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                        documentId INTEGER NOT NULL,
-                        productId INTEGER,
-                        name TEXT NOT NULL,
-                        quantity REAL NOT NULL,
-                        unitPrice INTEGER NOT NULL,
-                        lineTotal INTEGER NOT NULL
-                    )
-                    """.trimIndent()
-                )
-            }
-        }
-    }
+    @Insert
+    suspend fun insertFinancialEvent(event: FinancialEventEntity): Long
+
+    @Query("SELECT * FROM financial_events ORDER BY timestamp DESC")
+    suspend fun getFinancialEvents(): List<FinancialEventEntity>
+
+    @Insert
+    suspend fun insertDocument(document: FinancialDocumentEntity): Long
+
+    @Insert
+    suspend fun insertDocumentItems(items: List<DocumentItemEntity>)
+
+    @Query("SELECT * FROM documents ORDER BY createdAt DESC")
+    suspend fun getDocuments(): List<FinancialDocumentEntity>
+
+    @Query("SELECT * FROM document_items WHERE documentId = :documentId")
+    suspend fun getDocumentItems(documentId: Long): List<DocumentItemEntity>
+
+    @Query("SELECT * FROM documents WHERE type = :type ORDER BY createdAt DESC")
+    suspend fun getDocumentsByType(type: String): List<FinancialDocumentEntity>
+
+    @Query("SELECT COALESCE(SUM(total - paid), 0) FROM documents WHERE type = 'SALE'")
+    suspend fun totalSalesReceivable(): Long
+
+    @Query("SELECT COALESCE(SUM(total - paid), 0) FROM documents WHERE type = 'PURCHASE'")
+    suspend fun totalPurchasePayable(): Long
+
+    @Query("SELECT COALESCE(SUM(total), 0) FROM documents WHERE type = 'SALE' AND createdAt >= :start AND createdAt < :end")
+    suspend fun salesBetween(start: Long, end: Long): Long
+
+    @Query("SELECT COALESCE(SUM(paid), 0) FROM documents WHERE type = 'SALE' AND createdAt >= :start AND createdAt < :end")
+    suspend fun receiptsBetween(start: Long, end: Long): Long
 }
