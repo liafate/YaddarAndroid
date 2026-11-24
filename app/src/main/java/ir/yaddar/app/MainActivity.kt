@@ -43,13 +43,16 @@ fun YaddarApp() {
                             onClick = { selected = label },
                             label = { Text(label, fontSize = 11.sp) },
                             icon = {
-                                Icon(when(label) {
-                                    "خانه" -> Icons.Default.Home
-                                    "کالا" -> Icons.Default.Inventory2
-                                    "اشخاص" -> Icons.Default.People
-                                    "گزارش" -> Icons.Default.BarChart
-                                    else -> Icons.Default.Menu
-                                }, contentDescription = label)
+                                Icon(
+                                    when(label) {
+                                        "خانه" -> Icons.Default.Home
+                                        "کالا" -> Icons.Default.Inventory2
+                                        "اشخاص" -> Icons.Default.People
+                                        "گزارش" -> Icons.Default.BarChart
+                                        else -> Icons.Default.Menu
+                                    },
+                                    contentDescription = label
+                                )
                             }
                         )
                     }
@@ -66,42 +69,68 @@ fun YaddarApp() {
 
 @Composable
 private fun Dashboard(modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxSize().padding(horizontal = 18.dp).padding(top = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(
+        modifier.fillMaxSize().padding(horizontal = 18.dp).padding(top = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         Column {
             Text("یاددار", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Teal)
             Text("مدیریت ساده و روزانه مغازه", color = Color(0xFF667085))
         }
+
         Surface(shape = RoundedCornerShape(22.dp), color = Teal, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("سلام، روز بخیر", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Text("خلاصه وضعیت مغازه", color = Color.White.copy(alpha = .85f))
                 Spacer(Modifier.height(6.dp))
-                Text("اطلاعات واقعی پس از تکمیل ماژول‌ها در این بخش نمایش داده خواهد شد.", color = Color.White, fontSize = 13.sp)
+                Text(
+                    "اطلاعات واقعی پس از تکمیل ماژول‌ها در این بخش نمایش داده خواهد شد.",
+                    color = Color.White,
+                    fontSize = 13.sp
+                )
             }
         }
+
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             SummaryCard("فروش امروز", "—", Modifier.weight(1f))
             SummaryCard("دریافت امروز", "—", Modifier.weight(1f))
         }
+
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             SummaryCard("طلب از مشتری", "—", Modifier.weight(1f), Color(0xFFB7791F))
             SummaryCard("بدهی به فروشنده", "—", Modifier.weight(1f), Color(0xFFB7791F))
         }
+
         Text("عملیات سریع", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ActionTile("فروش جدید", Icons.Default.ShoppingCart, Modifier.weight(1f))
             ActionTile("ثبت خرید", Icons.Default.AddBox, Modifier.weight(1f))
         }
+
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ActionTile("مشتریان", Icons.Default.People, Modifier.weight(1f))
             ActionTile("دریافت / پرداخت", Icons.Default.AccountBalanceWallet, Modifier.weight(1f))
         }
+
         Surface(color = Color.White, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(Icons.Default.NotificationsActive, tint = Color(0xFFB7791F))
+            Row(
+                Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    Icons.Default.NotificationsActive,
+                    contentDescription = "یادآوری‌ها",
+                    tint = Color(0xFFB7791F)
+                )
                 Column {
                     Text("یادآوری‌ها", fontWeight = FontWeight.Bold)
-                    Text("هشدارهای موجودی و حساب‌ها در نسخه‌های بعدی فعال می‌شوند.", fontSize = 12.sp, color = Color.Gray)
+                    Text(
+                        "هشدارهای موجودی و حساب‌ها در نسخه‌های بعدی فعال می‌شوند.",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
                 }
             }
         }
@@ -109,7 +138,12 @@ private fun Dashboard(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun SummaryCard(title: String, value: String, modifier: Modifier = Modifier, accent: Color = Teal) {
+private fun SummaryCard(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    accent: Color = Teal
+) {
     Surface(color = Color.White, shape = RoundedCornerShape(18.dp), modifier = modifier) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, color = Color(0xFF667085), fontSize = 13.sp)
@@ -119,10 +153,18 @@ private fun SummaryCard(title: String, value: String, modifier: Modifier = Modif
 }
 
 @Composable
-private fun ActionTile(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier) {
+private fun ActionTile(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier
+) {
     Surface(color = Color.White, shape = RoundedCornerShape(18.dp), modifier = modifier.height(100.dp)) {
-        Column(Modifier.fillMaxSize().padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Icon(icon, tint = Teal, modifier = Modifier.size(30.dp))
+        Column(
+            Modifier.fillMaxSize().padding(14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, contentDescription = title, tint = Teal, modifier = Modifier.size(30.dp))
             Spacer(Modifier.height(8.dp))
             Text(title, fontWeight = FontWeight.Medium, fontSize = 14.sp)
         }
@@ -132,8 +174,16 @@ private fun ActionTile(title: String, icon: androidx.compose.ui.graphics.vector.
 @Composable
 private fun ComingSoon(name: String, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Icon(Icons.Default.Construction, tint = Teal, modifier = Modifier.size(48.dp))
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                Icons.Default.Construction,
+                contentDescription = name,
+                tint = Teal,
+                modifier = Modifier.size(48.dp)
+            )
             Text(name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Text("این بخش در مرحله توسعه قرار دارد.", color = Color.Gray)
         }
