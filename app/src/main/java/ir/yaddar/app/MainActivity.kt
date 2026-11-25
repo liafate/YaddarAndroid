@@ -257,8 +257,48 @@ private fun endExclusive(j:JDate):Long?=dayStart(j)?.let(::nextDay)
         HorizontalDivider();Text("تاریخچه",fontWeight=FontWeight.Bold)
         if(loading)CircularProgressIndicator() else events.forEach{LedgerRow(it,{editEvent=it},{deleteEvent=it})}
     }
-    editEvent?.let{EditEventDialog(it,{editEvent=null},{updated->scope.launch{try{dao.updateFinancialEvent(updated);editEvent=null;reload++;onChanged()}catch(e:Exception){msg="ویرایش ناموفق: ${e.message}"}}})}
-    deleteEvent?.let{ev->AlertDialog(onDismissRequest={deleteEvent=null},title={Text("حذف تراکنش")},text={Text("این تراکنش حذف شود؟")},confirmButton={TextButton(onClick={scope.launch{try{dao.deleteFinancialEvent(ev.id);deleteEvent=null;reload++;onChanged()}catch(e:Exception){msg=e.message?: "خطا"}}}){Text("حذف")}},dismissButton={TextButton(onClick={deleteEvent=null}){Text("لغو")}})}
+    editEvent?.let { event ->
+        EditEventDialog(
+            e = event,
+            onDismiss = { editEvent = null },
+            onSave = { updated ->
+                scope.launch {
+                    try {
+                        dao.updateFinancialEvent(updated)
+                        editEvent = null
+                        reload++
+                        onChanged()
+                    } catch (e: Exception) {
+                        msg = "ویرایش ناموفق: ${e.message}"
+                    }
+                }
+            }
+        )
+    }
+    deleteEvent?.let { event ->
+        AlertDialog(
+            onDismissRequest = { deleteEvent = null },
+            title = { Text("حذف تراکنش") },
+            text = { Text("این تراکنش حذف شود؟") },
+            confirmButton = {
+                TextButton(onClick = {
+                    scope.launch {
+                        try {
+                            dao.deleteFinancialEvent(event.id)
+                            deleteEvent = null
+                            reload++
+                            onChanged()
+                        } catch (e: Exception) {
+                            msg = e.message ?: "خطا"
+                        }
+                    }
+                }) { Text("حذف") }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteEvent = null }) { Text("لغو") }
+            }
+        )
+    }
 }
 @Composable private fun LedgerRow(e:FinancialEventEntity,onEdit:()->Unit,onDelete:()->Unit){
     Surface(color=Color.White,shape=RoundedCornerShape(14.dp),modifier=Modifier.fillMaxWidth()){Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){
@@ -301,7 +341,12 @@ private fun endExclusive(j:JDate):Long?=dayStart(j)?.let(::nextDay)
     val start=startTimestamp(from);val end=endExclusive(to)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick=onBack){Icon(Icons.Default.ArrowForward,null)};Text("گزارش دوره‌ای ${customer.name}",fontWeight=FontWeight.Bold)}
-        OutlinedButton(onClick={pickFrom=true},modifier=Modifier.fillMaxWidth()){Text("شروع: ${from.y}/${from.m}/${from.d}")};OutlinedButton(onClick={pickTo=true},modifier=Modifier.fillMaxWidth()){Text("پایان: ${to.y}/${to.m}/${to.d}")}}
+        OutlinedButton(onClick = { pickFrom = true }, modifier = Modifier.fillMaxWidth()) {
+            Text("شروع: ${from.y}/${from.m}/${from.d}")
+        }
+        OutlinedButton(onClick = { pickTo = true }, modifier = Modifier.fillMaxWidth()) {
+            Text("پایان: ${to.y}/${to.m}/${to.d}")
+        }
         Button(
             onClick = {
                 if (start == null || end == null || end <= start) {
