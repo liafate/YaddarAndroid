@@ -267,9 +267,34 @@ private fun endExclusive(j:JDate):Long?=dayStart(j)?.let(::nextDay)
     }}
 }
 @Composable private fun EditEventDialog(e:FinancialEventEntity,onDismiss:()->Unit,onSave:(FinancialEventEntity)->Unit){
-    var amount by remember{mutableStateOf(formatInput(e.amount.toString()))};var note by remember{mutableStateOf(e.note.orEmpty())};var date by remember{mutableStateOf(jDateFromTimestamp(e.timestamp))};var pick by remember{mutableStateOf(false)};var err by remember{mutableStateOf("")}
-    AlertDialog(onDismissRequest=onDismiss,title={Text("ویرایش تراکنش")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Text(if(e.eventType==EVENT_CUSTOMER_DEBT)"نوع: بدهی" else "نوع: دریافت");OutlinedTextField(amount,{amount=formatInput(it)},label={Text("مبلغ (تومان)")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number));OutlinedTextField(note,{note=it},label={Text("شرح")});OutlinedButton(onClick={pick=true}){Text("تاریخ: ${date.y}/${date.m}/${date.d}")};if(err.isNotBlank())Text(err,color=MaterialTheme.colorScheme.error)}},confirmButton={TextButton(onClick={val n=numeric(amount).toLongOrNull();val ts=startTimestamp(date);if(n==null||n<=0||ts==null)err="مبلغ یا تاریخ نامعتبر" else onSave(e.copy(amount=n,note=note.trim().ifBlank{null},timestamp=ts))){Text("ذخیره")}},dismissButton={TextButton(onClick=onDismiss){Text("لغو")}})
-    if(pick)JalaliDateDialog(date,{date=it;pick=false},{pick=false})
+    var amount by remember { mutableStateOf(formatInput(e.amount.toString())) }
+    var note by remember { mutableStateOf(e.note.orEmpty()) }
+    var date by remember { mutableStateOf(jDateFromTimestamp(e.timestamp)) }
+    var pick by remember { mutableStateOf(false) }
+    var err by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("ویرایش تراکنش") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(if (e.eventType == EVENT_CUSTOMER_DEBT) "نوع: بدهی" else "نوع: دریافت")
+                OutlinedTextField(value = amount, onValueChange = { amount = formatInput(it) }, label = { Text("مبلغ (تومان)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                OutlinedTextField(value = note, onValueChange = { note = it }, label = { Text("شرح") })
+                OutlinedButton(onClick = { pick = true }) { Text("تاریخ: ${date.y}/${date.m}/${date.d}") }
+                if (err.isNotBlank()) Text(err, color = MaterialTheme.colorScheme.error)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val n = numeric(amount).toLongOrNull()
+                val ts = startTimestamp(date)
+                if (n == null || n <= 0 || ts == null) err = "مبلغ یا تاریخ نامعتبر"
+                else onSave(e.copy(amount = n, note = note.trim().ifBlank { null }, timestamp = ts))
+            }) { Text("ذخیره") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("لغو") } }
+    )
+    if (pick) JalaliDateDialog(date, { date = it; pick = false }, { pick = false })
 }
 @Composable private fun CustomerPeriodReport(dao:YaddarDao,customer:PersonEntity,onBack:()->Unit){
     val scope=rememberCoroutineScope();var from by remember{mutableStateOf(todayJ())};var to by remember{mutableStateOf(todayJ())};var pickFrom by remember{mutableStateOf(false)};var pickTo by remember{mutableStateOf(false)};var data by remember{mutableStateOf<List<FinancialEventEntity>?>(null)};var opening by remember{mutableStateOf(0L)};var err by remember{mutableStateOf("")}
