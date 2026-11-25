@@ -1,4 +1,3 @@
-
 package ir.yaddar.app.data
 
 import androidx.room.Dao
@@ -20,11 +19,20 @@ interface YaddarDao {
     @Query("SELECT * FROM people ORDER BY name")
     suspend fun getPeople(): List<PersonEntity>
 
+    @Query("SELECT * FROM people WHERE kind = :kind ORDER BY name")
+    suspend fun getPeopleByKind(kind: String): List<PersonEntity>
+
     @Insert
     suspend fun insertFinancialEvent(event: FinancialEventEntity): Long
 
     @Query("SELECT * FROM financial_events ORDER BY timestamp DESC")
     suspend fun getFinancialEvents(): List<FinancialEventEntity>
+
+    @Query("SELECT * FROM financial_events WHERE personId = :personId ORDER BY timestamp DESC")
+    suspend fun getEventsForPerson(personId: Long): List<FinancialEventEntity>
+
+    @Query("SELECT * FROM financial_events WHERE personId = :personId AND eventType IN ('CUSTOMER_DEBT', 'CUSTOMER_PAYMENT') ORDER BY timestamp DESC")
+    suspend fun getCustomerLedgerEventsForPerson(personId: Long): List<FinancialEventEntity>
 
     @Insert
     suspend fun insertDocument(document: FinancialDocumentEntity): Long
