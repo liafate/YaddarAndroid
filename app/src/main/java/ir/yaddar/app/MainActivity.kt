@@ -187,14 +187,44 @@ private fun endExclusive(j:JDate):Long?=dayStart(j)?.let(::nextDay)
         Text("دفتر حساب مشتریان",fontSize=23.sp,fontWeight=FontWeight.Bold,color=Teal)
         OutlinedTextField(search,{search=it},label={Text("جستجو نام یا شماره تماس")},leadingIcon={Icon(Icons.Default.Search,null)},modifier=Modifier.fillMaxWidth(),singleLine=true)
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){FilterChip(sort=="name",{sort="name"},label={Text("نام")});FilterChip(sort=="debt",{sort="debt"},label={Text("بیشترین بدهی")});FilterChip(sort=="credit",{sort="credit"},label={Text("بستانکاری")});FilterChip(sort=="status",{sort="status"},label={Text("وضعیت")})}
-        Button(onClick={add=true,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Teal)){Icon(Icons.Default.PersonAdd,null);Spacer(Modifier.width(6.dp));Text("افزودن مشتری")}
-        OutlinedButton(onClick={allReport=true,modifier=Modifier.fillMaxWidth()){Icon(Icons.Default.Assessment,null);Spacer(Modifier.width(6.dp));Text("گزارش کلی مشتریان")}
+        Button(onClick={add=true},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Teal)){Icon(Icons.Default.PersonAdd,null);Spacer(Modifier.width(6.dp));Text("افزودن مشتری")}
+        OutlinedButton(onClick={allReport=true},modifier=Modifier.fillMaxWidth()){Icon(Icons.Default.Assessment,null);Spacer(Modifier.width(6.dp));Text("گزارش کلی مشتریان")}
         if(error.isNotBlank())Text(error,color=MaterialTheme.colorScheme.error)
         if(loading)CircularProgressIndicator()
         else if(filtered.isEmpty())Text(if(search.isNotEmpty())"نتیجه‌ای یافت نشد." else "هنوز مشتری ثبت نشده است.",color=Muted)
         else filtered.forEach{CustomerCard(it){selected=it.person}}
     }
-    if(add)AlertDialog(onDismissRequest={add=false},title={Text("مشتری جدید")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){OutlinedTextField(name,{name=it},label={Text("نام")});OutlinedTextField(phone,{phone=it},label={Text("شماره تماس")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Phone));if(formError.isNotBlank())Text(formError,color=MaterialTheme.colorScheme.error)}},confirmButton={TextButton(onClick={if(name.isBlank())formError="نام الزامی است." else scope.launch{try{dao.insertPerson(PersonEntity(name=name.trim(),phone=phone.trim().ifBlank{null},kind=CUSTOMER_KIND));add=false;name="";phone="";reload++}catch(e:Exception){formError=e.message?: "خطا"}}){Text("ذخیره")}},dismissButton={TextButton(onClick={add=false}){Text("لغو")}})
+    if (add) AlertDialog(
+        onDismissRequest = { add = false },
+        title = { Text("مشتری جدید") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(name, { name = it }, label = { Text("نام") })
+                OutlinedTextField(phone, { phone = it }, label = { Text("شماره تماس") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone))
+                if (formError.isNotBlank()) Text(formError, color = MaterialTheme.colorScheme.error)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (name.isBlank()) {
+                    formError = "نام الزامی است."
+                } else {
+                    scope.launch {
+                        try {
+                            dao.insertPerson(PersonEntity(name = name.trim(), phone = phone.trim().ifBlank { null }, kind = CUSTOMER_KIND))
+                            add = false
+                            name = ""
+                            phone = ""
+                            reload++
+                        } catch (e: Exception) {
+                            formError = e.message ?: "خطا"
+                        }
+                    }
+                }
+            }) { Text("ذخیره") }
+        },
+        dismissButton = { TextButton(onClick = { add = false }) { Text("لغو") } }
+    )
 }
 @Composable private fun CustomerCard(s:CustomerSummary,onClick:()->Unit){
     val col=if(s.balance>0)Color(0xFFB7791F) else if(s.balance<0)Teal else Muted
@@ -246,8 +276,25 @@ private fun endExclusive(j:JDate):Long?=dayStart(j)?.let(::nextDay)
     val start=startTimestamp(from);val end=endExclusive(to)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick=onBack){Icon(Icons.Default.ArrowForward,null)};Text("گزارش دوره‌ای ${customer.name}",fontWeight=FontWeight.Bold)}
-        OutlinedButton(onClick={pickFrom=true,modifier=Modifier.fillMaxWidth()){Text("شروع: ${from.y}/${from.m}/${from.d}")};OutlinedButton(onClick={pickTo=true,modifier=Modifier.fillMaxWidth()){Text("پایان: ${to.y}/${to.m}/${to.d}")}}
-        Button(onClick={if(start==null||end==null||end<=start)err="بازه تاریخ معتبر نیست." else scope.launch{try{opening=dao.customerOpeningBalance(customer.id,start);data=dao.getCustomerLedgerEventsBetween(customer.id,start,end);err=""}catch(e:Exception){err=e.message?: "خطا"}},modifier=Modifier.fillMaxWidth()){Text("محاسبه گزارش")}
+        OutlinedButton(onClick={pickFrom=true},modifier=Modifier.fillMaxWidth()){Text("شروع: ${from.y}/${from.m}/${from.d}")};OutlinedButton(onClick={pickTo=true},modifier=Modifier.fillMaxWidth()){Text("پایان: ${to.y}/${to.m}/${to.d}")}}
+        Button(
+            onClick = {
+                if (start == null || end == null || end <= start) {
+                    err = "بازه تاریخ معتبر نیست."
+                } else {
+                    scope.launch {
+                        try {
+                            opening = dao.customerOpeningBalance(customer.id, start)
+                            data = dao.getCustomerLedgerEventsBetween(customer.id, start, end)
+                            err = ""
+                        } catch (e: Exception) {
+                            err = e.message ?: "خطا"
+                        }
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("محاسبه گزارش") }
         if(err.isNotBlank())Text(err,color=MaterialTheme.colorScheme.error)
         data?.let{list->val debts=list.filter{it.eventType==EVENT_CUSTOMER_DEBT}.sumOf{it.amount};val payments=list.filter{it.eventType==EVENT_CUSTOMER_PAYMENT}.sumOf{it.amount};val closing=opening+debts-payments
             ReportValue("مانده ابتدای دوره",opening);ReportValue("مجموع بدهی",debts);ReportValue("مجموع دریافت",payments);ReportValue("مانده پایان دوره",closing)
@@ -270,4 +317,4 @@ private fun endExclusive(j:JDate):Long?=dayStart(j)?.let(::nextDay)
 @Composable private fun ReportEventRow(e:FinancialEventEntity){
     Surface(color=Color.White,shape=RoundedCornerShape(12.dp),modifier=Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp)){Text(if(e.eventType==EVENT_CUSTOMER_DEBT)"بدهی" else "دریافت",fontWeight=FontWeight.Medium);Text(jDateText(e.timestamp),color=Muted,fontSize=12.sp);Text((if(e.eventType==EVENT_CUSTOMER_DEBT)"+" else "−")+money(e.amount)+" تومان");e.note?.takeIf{it.isNotBlank()}?.let{Text(it,color=Muted,fontSize=12.sp)}}}
 }
-\n@Composable private fun ComingSoon(name:String,modifier:Modifier=Modifier){Box(modifier.fillMaxSize(),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.Center,verticalArrangement=Arrangement.spacedBy(12.dp)){Icon(Icons.Default.Construction,null,tint=Teal,modifier=Modifier.size(48.dp));Text(name,fontSize=22.sp,fontWeight=FontWeight.Bold);Text("این بخش در مرحله توسعه قرار دارد.",color=Color.Gray)}}}
+@Composable private fun ComingSoon(name:String,modifier:Modifier=Modifier){Box(modifier.fillMaxSize(),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.Center,verticalArrangement=Arrangement.spacedBy(12.dp)){Icon(Icons.Default.Construction,null,tint=Teal,modifier=Modifier.size(48.dp));Text(name,fontSize=22.sp,fontWeight=FontWeight.Bold);Text("این بخش در مرحله توسعه قرار دارد.",color=Color.Gray)}}}
