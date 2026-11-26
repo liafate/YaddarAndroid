@@ -387,4 +387,20 @@ private fun endExclusive(j:JDate):Long?=dayStart(j)?.let(::nextDay)
 @Composable private fun ReportEventRow(e:FinancialEventEntity){
     Surface(color=Color.White,shape=RoundedCornerShape(12.dp),modifier=Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp)){Text(if(e.eventType==EVENT_CUSTOMER_DEBT)"بدهی" else "دریافت",fontWeight=FontWeight.Medium);Text(jDateText(e.timestamp),color=Muted,fontSize=12.sp);Text((if(e.eventType==EVENT_CUSTOMER_DEBT)"+" else "−")+money(e.amount)+" تومان");e.note?.takeIf{it.isNotBlank()}?.let{Text(it,color=Muted,fontSize=12.sp)}}}
 }
-@Composable private fun ComingSoon(name:String,modifier:Modifier=Modifier){Box(modifier.fillMaxSize(),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.Center,verticalArrangement=Arrangement.spacedBy(12.dp)){Icon(Icons.Default.Construction,null,tint=Teal,modifier=Modifier.size(48.dp));Text(name,fontSize=22.sp,fontWeight=FontWeight.Bold);Text("این بخش در مرحله توسعه قرار دارد.",color=Color.Gray)}}}
+@Composable
+private fun ComingSoon(name: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(Icons.Default.Construction, contentDescription = null, tint = Teal, modifier = Modifier.size(48.dp))
+            Text(name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text("این بخش در مرحله توسعه قرار دارد.", color = Color.Gray)
+        }
+    }
+}
