@@ -77,7 +77,9 @@ fun YaddarApp(db: YaddarDatabase) {
     var debtor by remember { mutableStateOf(0L) }
     var creditor by remember { mutableStateOf(0L) }
     var loaded by remember { mutableStateOf(false) }
+    var dashboardError by remember { mutableStateOf("") }
     LaunchedEffect(db) {
+        dashboardError = ""
         try {
             val cal=Calendar.getInstance(); cal.set(Calendar.HOUR_OF_DAY,0);cal.set(Calendar.MINUTE,0);cal.set(Calendar.SECOND,0);cal.set(Calendar.MILLISECOND,0)
             val start=cal.timeInMillis;cal.add(Calendar.DAY_OF_MONTH,1);val end=cal.timeInMillis
@@ -85,7 +87,7 @@ fun YaddarApp(db: YaddarDatabase) {
             val people=db.yaddarDao().getPeopleByKind(CUSTOMER_KIND)
             val balances=people.map{balanceOf(db.yaddarDao().getCustomerLedgerEventsForPerson(it.id))}
             debtor=balances.sumOf{it.coerceAtLeast(0)}; creditor=balances.sumOf{(-it).coerceAtLeast(0)}
-        }catch(_:Exception){} finally {loaded=true}
+        }catch(e:Exception){ dashboardError = e.message ?: e.javaClass.simpleName } finally {loaded=true}
     }
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         Text("یاددار",fontSize=28.sp,fontWeight=FontWeight.Bold,color=Teal)
@@ -99,6 +101,14 @@ fun YaddarApp(db: YaddarDatabase) {
         }
         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){SummaryCard("فروش امروز","ماژول فروش فعال نیست",Modifier.weight(1f),Muted);SummaryCard("دریافت امروز",if(loaded)money(received) else "...",Modifier.weight(1f),Teal)}
         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){SummaryCard("طلب از مشتریان",if(loaded)money(debtor) else "...",Modifier.weight(1f),Color(0xFFB7791F));SummaryCard("بدهی به مشتریان",if(loaded)money(creditor) else "...",Modifier.weight(1f),Color(0xFF2878A0))}
+        if (dashboardError.isNotBlank()) {
+            Surface(color=Color(0xFFFFF0E5), shape=RoundedCornerShape(14.dp), modifier=Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    Text("خطا در بارگذاری اطلاعات خانه", fontWeight=FontWeight.Bold, color=Color(0xFF9A3412))
+                    Text(dashboardError, color=Color(0xFF9A3412), fontSize=12.sp)
+                }
+            }
+        }
         Text("عملیات سریع",fontWeight=FontWeight.Bold,fontSize=18.sp)
         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){ActionTile("فروش جدید",Icons.Default.ShoppingCart,Modifier.weight(1f));ActionTile("ثبت خرید",Icons.Default.AddBox,Modifier.weight(1f))}
         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){ActionTile("مشتریان",Icons.Default.People,Modifier.weight(1f),onCustomers);ActionTile("دریافت / پرداخت",Icons.Default.AccountBalanceWallet,Modifier.weight(1f),onCustomers)}
