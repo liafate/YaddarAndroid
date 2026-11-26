@@ -65,26 +65,40 @@ fun YaddarApp(db: YaddarDatabase) {
             }
         }) { padding ->
             when(selected) {
-                "خانه" -> Dashboard(Modifier.padding(padding)) { selected = "اشخاص" }
+                "خانه" -> Dashboard(db,Modifier.padding(padding)) { selected = "اشخاص" }
                 "اشخاص" -> CustomerBook(db, Modifier.padding(padding))
                 else -> ComingSoon(selected, Modifier.padding(padding))
             }
         }
     }
 }
-@Composable private fun Dashboard(modifier: Modifier=Modifier,onCustomers:()->Unit) {
-    Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement=Arrangement.spacedBy(16.dp)) {
+@Composable private fun Dashboard(db:YaddarDatabase,modifier: Modifier=Modifier,onCustomers:()->Unit) {
+    var received by remember { mutableStateOf(0L) }
+    var debtor by remember { mutableStateOf(0L) }
+    var creditor by remember { mutableStateOf(0L) }
+    var loaded by remember { mutableStateOf(false) }
+    LaunchedEffect(db) {
+        try {
+            val cal=Calendar.getInstance(); cal.set(Calendar.HOUR_OF_DAY,0);cal.set(Calendar.MINUTE,0);cal.set(Calendar.SECOND,0);cal.set(Calendar.MILLISECOND,0)
+            val start=cal.timeInMillis;cal.add(Calendar.DAY_OF_MONTH,1);val end=cal.timeInMillis
+            received=db.yaddarDao().customerPaymentsBetween(start,end)
+            val people=db.yaddarDao().getPeopleByKind(CUSTOMER_KIND)
+            val balances=people.map{balanceOf(db.yaddarDao().getCustomerLedgerEventsForPerson(it.id))}
+            debtor=balances.sumOf{it.coerceAtLeast(0)}; creditor=balances.sumOf{(-it).coerceAtLeast(0)}
+        }catch(_:Exception){} finally {loaded=true}
+    }
+    Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         Text("یاددار",fontSize=28.sp,fontWeight=FontWeight.Bold,color=Teal)
         Text("مدیریت ساده و روزانه مغازه",color=Muted)
         Surface(color=Teal,shape=RoundedCornerShape(22.dp),modifier=Modifier.fillMaxWidth()) {
             Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                 Text("سلام، روز بخیر",color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold)
                 Text("خلاصه وضعیت مغازه",color=Color.White.copy(alpha=.85f))
-                Text("اطلاعات واقعی پس از تکمیل ماژول‌ها در این بخش نمایش داده خواهد شد.",color=Color.White,fontSize=13.sp)
+                Text("اعداد از اطلاعات ثبت‌شده در برنامه محاسبه می‌شوند.",color=Color.White,fontSize=13.sp)
             }
         }
-        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){SummaryCard("فروش امروز","—",Modifier.weight(1f));SummaryCard("دریافت امروز","—",Modifier.weight(1f))}
-        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){SummaryCard("طلب از مشتری","—",Modifier.weight(1f),Color(0xFFB7791F));SummaryCard("بدهی به فروشنده","—",Modifier.weight(1f),Color(0xFFB7791F))}
+        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){SummaryCard("فروش امروز","ماژول فروش فعال نیست",Modifier.weight(1f),Muted);SummaryCard("دریافت امروز",if(loaded)money(received) else "...",Modifier.weight(1f),Teal)}
+        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){SummaryCard("طلب از مشتریان",if(loaded)money(debtor) else "...",Modifier.weight(1f),Color(0xFFB7791F));SummaryCard("بدهی به مشتریان",if(loaded)money(creditor) else "...",Modifier.weight(1f),Color(0xFF2878A0))}
         Text("عملیات سریع",fontWeight=FontWeight.Bold,fontSize=18.sp)
         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){ActionTile("فروش جدید",Icons.Default.ShoppingCart,Modifier.weight(1f));ActionTile("ثبت خرید",Icons.Default.AddBox,Modifier.weight(1f))}
         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){ActionTile("مشتریان",Icons.Default.People,Modifier.weight(1f),onCustomers);ActionTile("دریافت / پرداخت",Icons.Default.AccountBalanceWallet,Modifier.weight(1f),onCustomers)}
