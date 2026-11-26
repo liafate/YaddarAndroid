@@ -33,4 +33,5 @@ interface YaddarDao {
     @Query("SELECT COALESCE(SUM(total - paid), 0) FROM documents WHERE type = 'PURCHASE'") suspend fun totalPurchasePayable(): Long
     @Query("SELECT COALESCE(SUM(total), 0) FROM documents WHERE type = 'SALE' AND createdAt >= :start AND createdAt < :end") suspend fun salesBetween(start: Long, end: Long): Long
     @Query("SELECT COALESCE(SUM(paid), 0) FROM documents WHERE type = 'SALE' AND createdAt >= :start AND createdAt < :end") suspend fun receiptsBetween(start: Long, end: Long): Long
+    @Query("SELECT COALESCE(SUM(amount), 0) FROM financial_events WHERE eventType = 'CUSTOMER_PAYMENT' AND timestamp >= :start AND timestamp < :end") suspend fun customerPaymentsBetween(start: Long, end: Long): Long
 }
