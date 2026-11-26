@@ -11,13 +11,14 @@ import androidx.room.RoomDatabase
         FinancialDocumentEntity::class,
         DocumentItemEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class YaddarDatabase : RoomDatabase() {
     abstract fun yaddarDao(): YaddarDao
 
     companion object {
+        val MIGRATION_2_3 = androidx.room.migration.Migration(2, 3) { db -> db.execSQL("ALTER TABLE people ADD COLUMN customerType TEXT NOT NULL DEFAULT 'حقیقی'") }
         val MIGRATION_1_2 =
             androidx.room.migration.Migration(1, 2) { db ->
                 db.execSQL(
