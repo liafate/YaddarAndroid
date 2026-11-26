@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val db = Room.databaseBuilder(applicationContext, YaddarDatabase::class.java, "yaddar.db")
-            .addMigrations(YaddarDatabase.MIGRATION_1_2).build()
+            .addMigrations(YaddarDatabase.MIGRATION_1_2, YaddarDatabase.MIGRATION_2_3).build()
         setContent { YaddarApp(db) }
     }
 }
@@ -147,6 +147,8 @@ private fun jDateFromTimestamp(ts:Long):JDate{
 private fun jDateText(ts:Long):String{val j=jDateFromTimestamp(ts);return "%04d/%02d/%02d".format(Locale.US,j.y,j.m,j.d)}
 private fun startTimestamp(j:JDate):Long?{
     if(j.y<1200||j.m !in 1..12||j.d !in 1..31)return null
+    val today=todayJ()
+    if(j.y>today.y || (j.y==today.y && j.m>today.m) || (j.y==today.y && j.m==today.m && j.d>today.d))return null
     val (gy,gm,gd)=jalaliToGregorian(j.y,j.m,j.d)
     val c=Calendar.getInstance();c.clear();c.set(gy,gm-1,gd,0,0,0);c.set(Calendar.MILLISECOND,0)
     // Round-trip validation rejects impossible dates.
@@ -174,13 +176,13 @@ private fun endExclusive(j:JDate):Long?=dayStart(j)?.let(::nextDay)
     var summaries by remember{mutableStateOf<List<CustomerSummary>>(emptyList())};var loading by remember{mutableStateOf(true)}
     var error by remember{mutableStateOf("")};var reload by remember{mutableIntStateOf(0)}
     var selected by remember{mutableStateOf<PersonEntity?>(null)};var add by remember{mutableStateOf(false)}
-    var name by remember{mutableStateOf("")};var phone by remember{mutableStateOf("")};var formError by remember{mutableStateOf("")}
+    var name by remember{mutableStateOf("")};var phone by remember{mutableStateOf("")};var customerType by remember{mutableStateOf("حقیقی")};var otherType by remember{mutableStateOf("")};var formError by remember{mutableStateOf("")}
     var search by remember{mutableStateOf("")};var sort by remember{mutableStateOf("name")}
     var allReport by remember{mutableStateOf(false)}
     LaunchedEffect(reload){loading=true;try{summaries=dao.getPeopleByKind(CUSTOMER_KIND).map{CustomerSummary(it,balanceOf(dao.getCustomerLedgerEventsForPerson(it.id)))};error=""}catch(e:Exception){error=e.message?: "خطا"};loading=false}
-    if(allReport){AllCustomerReport(summaries,onBack={allReport=false}) ;return}
+    if(allReport){AllCustomerReport(summaries,onBack={allReport=false},onSelect={selected=it}) ;return}
     if(selected!=null){CustomerLedger(db,selected!!,modifier,{selected=null},{reload++});return}
-    val filtered=summaries.filter{it.person.name.contains(search,true)||(it.person.phone?.contains(search)==true)}.let{list->
+    val filtered=summaries.filter{it.person.name.contains(search,true)||(it.person.phone?.let{ph->numeric(ph).contains(numeric(search))}==true)}.let{list->
         when(sort){"debt"->list.sortedByDescending{it.balance.coerceAtLeast(0)};"credit"->list.sortedByDescending{(-it.balance).coerceAtLeast(0)};"status"->list.sortedBy{when{it.balance>0->0;it.balance<0->1;else->2}};else->list.sortedBy{it.person.name.lowercase()}}
     }
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
@@ -200,6 +202,9 @@ private fun endExclusive(j:JDate):Long?=dayStart(j)?.let(::nextDay)
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it }, label = { Text("نام") })
+                Text("نوع مشتری")
+                Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){listOf("حقیقی","شرکت","مغازه","سایر موارد").forEach{FilterChip(customerType==it,{customerType=it},label={Text(it)})}}
+                if(customerType=="سایر موارد") OutlinedTextField(otherType,{otherType=it},label={Text("نوع مشتری")})
                 OutlinedTextField(phone, { phone = it }, label = { Text("شماره تماس") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone))
                 if (formError.isNotBlank()) Text(formError, color = MaterialTheme.colorScheme.error)
             }
@@ -211,10 +216,12 @@ private fun endExclusive(j:JDate):Long?=dayStart(j)?.let(::nextDay)
                 } else {
                     scope.launch {
                         try {
-                            dao.insertPerson(PersonEntity(name = name.trim(), phone = phone.trim().ifBlank { null }, kind = CUSTOMER_KIND))
+                            dao.insertPerson(PersonEntity(name = name.trim(), phone = phone.trim().ifBlank { null }, kind = CUSTOMER_KIND, customerType = if(customerType=="سایر موارد") otherType.trim().ifBlank { "سایر موارد" } else customerType))
                             add = false
                             name = ""
                             phone = ""
+                            customerType = "حقیقی"
+                            otherType = ""
                             reload++
                         } catch (e: Exception) {
                             formError = e.message ?: "خطا"
@@ -376,12 +383,12 @@ private fun endExclusive(j:JDate):Long?=dayStart(j)?.let(::nextDay)
 }
 @Composable private fun ReportValue(label:String,value:Long){Surface(color=Color.White,shape=RoundedCornerShape(12.dp),modifier=Modifier.fillMaxWidth()){Row(Modifier.padding(12.dp),horizontalArrangement=Arrangement.SpaceBetween){Text(label);Text("${money(kotlin.math.abs(value))} تومان",fontWeight=FontWeight.Bold,color=if(value<0)Teal else Color(0xFFB7791F))}}}
 @Composable private fun ShareButton(label:String,content:String){val ctx=androidx.compose.ui.platform.LocalContext.current;Button(onClick={val i=Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,content);ctx.startActivity(Intent.createChooser(i,label))},modifier=Modifier.fillMaxWidth()){Icon(Icons.Default.Share,null);Spacer(Modifier.width(6.dp));Text(label)}}
-@Composable private fun AllCustomerReport(summaries:List<CustomerSummary>,onBack:()->Unit){
+@Composable private fun AllCustomerReport(summaries:List<CustomerSummary>,onBack:()->Unit,onSelect:(PersonEntity)->Unit){
     var sort by remember{mutableStateOf(false)}
     val ordered=if(sort)summaries.sortedByDescending{it.balance}else summaries.sortedBy{it.person.name.lowercase()}
     val debt=ordered.sumOf{it.balance.coerceAtLeast(0)};val credit=ordered.sumOf{(-it.balance).coerceAtLeast(0)}
     val report=buildString{append("گزارش کلی مشتریان\n\n");ordered.forEach{append("${it.person.name} | ${it.person.phone.orEmpty()} | ${if(it.balance>0)"بدهکار" else if(it.balance<0)"بستانکار" else "تسویه"} | ${money(kotlin.math.abs(it.balance))} تومان\n")};append("\nمجموع بدهکاری: ${money(debt)}\nمجموع بستانکاری: ${money(credit)}")}
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick=onBack){Icon(Icons.Default.ArrowForward,null)};Text("گزارش کلی مشتریان",fontWeight=FontWeight.Bold)};Button(onClick={sort=!sort},modifier=Modifier.fillMaxWidth()){Text(if(sort)"مرتب‌سازی نام" else "مرتب‌سازی مانده")};ReportValue("مجموع بدهکاری",debt);ReportValue("مجموع بستانکاری",credit);ordered.forEach{CustomerCard(it,{})};ShareButton("اشتراک گزارش",report)}
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick=onBack){Icon(Icons.Default.ArrowForward,null)};Text("گزارش کلی مشتریان",fontWeight=FontWeight.Bold)};Button(onClick={sort=!sort},modifier=Modifier.fillMaxWidth()){Text(if(sort)"مرتب‌سازی نام" else "مرتب‌سازی مانده")};ReportValue("مجموع بدهکاری",debt);ReportValue("مجموع بستانکاری",credit);ordered.forEach{CustomerCard(it,{onSelect(it.person)})};ShareButton("اشتراک گزارش",report)}
 }
 
 @Composable private fun ReportEventRow(e:FinancialEventEntity){
